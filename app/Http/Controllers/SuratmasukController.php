@@ -9,9 +9,19 @@ use Illuminate\Support\Facades\Storage;
 
 class SuratmasukController extends Controller
 {
-    public function index() {
-        $surat_masuk = SuratMasuk::all();
-        // return response()->json(['data' => $surat_masuk]);
+    public function index(Request $request) {
+
+        // $surat_masuk = SuratMasuk::all();
+
+        $query = $request->input('query');
+
+        if ($query) {
+            $surat_masuk = SuratMasuk::where('nosurat', 'like', "%{$query}%")
+                                    ->orWhere('perihal', 'like', "%{$query}%")
+                                    ->get();
+        } else {
+            $surat_masuk = SuratMasuk::all();
+        }
         return SuratmasukResource::collection($surat_masuk);
     }
 
@@ -28,20 +38,44 @@ class SuratmasukController extends Controller
             
         ]);
 
-        $file = null;
-        if($request->file){
-            $fileName = $this->generateRandomString();
-            $extension = $request->file->extension();
-            $file = $fileName.'.'.$extension;
-            Storage::putFileAs('surat-masuk', $request->file, $file);
+        // $file = null;
+        // if($request->file){
+        //     $fileName = $this->generateRandomString();
+        //     $extension = $request->file->extension();
+        //     $file = $fileName.'.'.$extension;
+        //     Storage::putFileAs('surat-masuk', $request->file, $file);
+        // }
+
+        // $request['namafile'] = $file;
+        // $suratMasuk = SuratMasuk::create($request->all());
+
+        if($request->file('namafile')) {
+            $validated['namafile'] = $request->file('namafile')->store('file-surat-masuk');
         }
 
-        $request['namafile'] = $file;
-        $suratMasuk = SuratMasuk::create($request->all());
+        suratMasuk::create($validated);
 
 
-        return new SuratmasukResource($suratMasuk);
+        return new SuratmasukResource($validated);
+
+        // return response()->json(['data' => $validated]);
+
+        // return response()->json([
+        //     'status' => 200,
+        //     'message' => 'Surat masuk berhasil ditambahkan',
+        // ]);
     }
+
+        
+
+
+
+
+    public function show($id) {
+        $surat_masuk = SuratMasuk::findOrFail($id);
+        return new SuratmasukResource($surat_masuk);
+    }
+
 
     public function update(Request $request, $id){
         $validated = $request->validate([
@@ -59,24 +93,29 @@ class SuratmasukController extends Controller
         $suratMasuk = SuratMasuk::findOrFail($id);
     
         // Jika ada file baru yang diupload
-        if($request->file){
+        if($request->file('namafile')){
             // Hapus gambar lama jika ada
             if($suratMasuk->namafile){
-                Storage::delete('surat-masuk/'.$suratMasuk->namafile);
+                Storage::delete('file-surat-masuk/'.$suratMasuk->namafile);
             }
     
             // Upload gambar baru
-            $fileName = $this->generateRandomString();
-            $extension = $request->file->extension();
-            $file = $fileName.'.'.$extension;
-            Storage::putFileAs('surat-masuk', $request->file, $file);
+            $file = $request->file('namafile');
+            $randomName = $this->generateRandomString();
+            $extension = $file->extension();
+            // $filename = $randomName.'.'.$extension;
+            $filename = $file->storeAs('/file-surat-masuk', $randomName.'.'.$extension, ['disk' => 'public']);
+
+            // Storage::putFileAs('file-surat-masuk', $request->file, $file);
+            
+            // var_dump($filename);
     
             // Simpan nama file baru ke database
-            $suratMasuk->update(['namafile' => $file]);
+            $suratMasuk->update(['namafile' => $filename]);
         }
     
         // Update data lainnya
-        $suratMasuk->update($request->except('file'));
+        $suratMasuk->update($request->except('namafile'));
         
         return new SuratmasukResource($suratMasuk);
     }
@@ -87,6 +126,10 @@ class SuratmasukController extends Controller
             Storage::delete('surat-masuk/'.basename($suratMasuk->namafile));
         }
         $suratMasuk->delete();
+    }
+
+    public function search($key){
+
     }
 
     function generateRandomString($length = 10) {

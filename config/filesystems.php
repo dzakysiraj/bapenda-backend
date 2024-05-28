@@ -29,10 +29,14 @@ return [
     */
 
     'disks' => [
+        'surat' => [
+            'driver' => 'local',
+            'root' => public_path('storage')
+        ],
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app'),
+            'root' => storage_path('storage'),
             'throw' => false,
         ],
 
