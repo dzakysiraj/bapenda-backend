@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Route;
 // Routes login
 Route::post('/login', LoginController::class)->name('login');
 
+
 Route::middleware(['auth:api'])->group(function () {
 
 Route::get('/', [SuratMasukController::class, 'index']);
